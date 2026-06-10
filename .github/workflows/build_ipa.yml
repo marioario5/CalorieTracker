@@ -1,0 +1,41 @@
+name: Build IPA
+
+on:
+  workflow_dispatch: # run manually from GitHub Actions tab
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate iOS project files
+        run: flutter create --platforms=ios . --project-name calorie_tracker
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package into IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r calorie_tracker.ipa Payload/
+          rm -rf Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: calorie_tracker-ipa
+          path: calorie_tracker.ipa
+          retention-days: 30
