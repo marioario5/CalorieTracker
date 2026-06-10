@@ -445,8 +445,9 @@ class _FoodLogCard extends StatelessWidget {
               decoration: BoxDecoration(
                   color: AppTheme.primarySurface,
                   borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.egg_alt_outlined,
-                  color: AppTheme.primary, size: 20),
+              child: Icon(
+                food.isSpice ? Icons.spa_outlined : Icons.egg_alt_outlined,
+                color: AppTheme.primary, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(

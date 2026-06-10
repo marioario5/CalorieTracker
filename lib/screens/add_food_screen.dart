@@ -25,6 +25,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   // micro id -> controller
   final Map<String, TextEditingController> _microControllers = {};
+  bool _isSpice = false;
 
   bool get _isEditing => widget.existingFood != null;
 
@@ -33,12 +34,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     super.initState();
     final f = widget.existingFood;
     _name = TextEditingController(text: f?.name ?? '');
-    _calories = TextEditingController(text: f?.calories.toStringAsFixed(0) ?? '');
-    _protein = TextEditingController(text: f?.protein.toStringAsFixed(1) ?? '');
-    _carbs = TextEditingController(text: f?.carbs.toStringAsFixed(1) ?? '');
-    _fat = TextEditingController(text: f?.fat.toStringAsFixed(1) ?? '');
-    _servingSize = TextEditingController(text: f?.servingSize.toStringAsFixed(0) ?? '100');
-    _servingUnit = TextEditingController(text: f?.servingUnit ?? 'g');
+    _calories = TextEditingController(text: f?.calories != null && f!.calories > 0 ? f.calories.toStringAsFixed(0) : '');
+    _protein = TextEditingController(text: f?.protein != null && f!.protein > 0 ? f.protein.toStringAsFixed(1) : '');
+    _carbs = TextEditingController(text: f?.carbs != null && f!.carbs > 0 ? f.carbs.toStringAsFixed(1) : '');
+    _fat = TextEditingController(text: f?.fat != null && f!.fat > 0 ? f.fat.toStringAsFixed(1) : '');
+    _servingSize = TextEditingController(text: f?.servingSize.toStringAsFixed(0) ?? '1');
+    _servingUnit = TextEditingController(text: f?.servingUnit ?? 'tsp');
+    _isSpice = f?.isSpice ?? false;
 
     // pre-fill micro controllers from existing food
     if (f != null) {
@@ -75,13 +77,14 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     final food = FoodItem(
       id: widget.existingFood?.id ?? provider.generateId(),
       name: _name.text.trim(),
-      calories: double.parse(_calories.text),
-      protein: double.parse(_protein.text),
-      carbs: double.parse(_carbs.text),
-      fat: double.parse(_fat.text),
+      calories: _isSpice ? (double.tryParse(_calories.text) ?? 0) : double.parse(_calories.text),
+      protein: _isSpice ? (double.tryParse(_protein.text) ?? 0) : double.parse(_protein.text),
+      carbs: _isSpice ? (double.tryParse(_carbs.text) ?? 0) : double.parse(_carbs.text),
+      fat: _isSpice ? (double.tryParse(_fat.text) ?? 0) : double.parse(_fat.text),
       servingSize: double.parse(_servingSize.text),
-      servingUnit: _servingUnit.text.trim().isEmpty ? 'g' : _servingUnit.text.trim(),
+      servingUnit: _servingUnit.text.trim().isEmpty ? (_isSpice ? 'tsp' : 'g') : _servingUnit.text.trim(),
       micros: micros,
+      isSpice: _isSpice,
     );
 
     if (_isEditing) {
@@ -127,9 +130,71 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(hintText: 'e.g. Chicken breast'),
+              decoration: InputDecoration(
+                hintText: _isSpice ? 'e.g. Turmeric, Black pepper' : 'e.g. Chicken breast',
+              ),
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'Enter a name' : null,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Spice toggle
+            GestureDetector(
+              onTap: () => setState(() {
+                _isSpice = !_isSpice;
+                if (_isSpice) {
+                  // set sensible spice defaults
+                  if (_servingSize.text == '100' || _servingSize.text.isEmpty) {
+                    _servingSize.text = '1';
+                  }
+                  if (_servingUnit.text == 'g' || _servingUnit.text.isEmpty) {
+                    _servingUnit.text = 'tsp';
+                  }
+                } else {
+                  if (_servingSize.text == '1') _servingSize.text = '100';
+                  if (_servingUnit.text == 'tsp') _servingUnit.text = 'g';
+                }
+              }),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _isSpice ? AppTheme.primarySurface : AppTheme.background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isSpice ? AppTheme.primary : AppTheme.border,
+                  ),
+                ),
+                child: Row(children: [
+                  Icon(
+                    Icons.spa_outlined,
+                    color: _isSpice ? AppTheme.primary : AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(
+                        'Spice / seasoning',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _isSpice ? AppTheme.primary : AppTheme.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Macros become optional — negligible calories',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ]),
+                  ),
+                  Switch(
+                    value: _isSpice,
+                    onChanged: (v) => setState(() => _isSpice = v),
+                    activeColor: AppTheme.primary,
+                  ),
+                ]),
+              ),
             ),
 
             const SizedBox(height: 20),
@@ -141,7 +206,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 child: TextFormField(
                   controller: _servingSize,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: '100'),
+                  decoration: InputDecoration(hintText: _isSpice ? '1' : '100'),
                   validator: (v) => _validatePositiveNumber(v, 'Size'),
                 ),
               ),
@@ -149,13 +214,23 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _servingUnit,
-                  decoration: const InputDecoration(hintText: 'g'),
+                  decoration: InputDecoration(hintText: _isSpice ? 'tsp' : 'g'),
                 ),
               ),
             ]),
 
             const SizedBox(height: 20),
-            _sectionLabel(context, 'Macros per serving'),
+            Row(children: [
+              Expanded(child: _sectionLabel(context, 'Macros per serving')),
+              if (_isSpice)
+                Text(
+                  'all optional',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                ),
+            ]),
             const SizedBox(height: 8),
 
             _NutritionField(
@@ -163,7 +238,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               label: 'Calories',
               unit: 'kcal',
               color: AppTheme.accent,
-              validator: (v) => _validatePositiveNumber(v, 'Calories'),
+              validator: _isSpice ? (_) => null : (v) => _validatePositiveNumber(v, 'Calories'),
+              isOptional: _isSpice,
             ),
             const SizedBox(height: 10),
             _NutritionField(
@@ -171,7 +247,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               label: 'Protein',
               unit: 'g',
               color: AppTheme.proteinColor,
-              validator: (v) => _validateNumber(v, 'Protein'),
+              validator: _isSpice ? (_) => null : (v) => _validateNumber(v, 'Protein'),
+              isOptional: _isSpice,
             ),
             const SizedBox(height: 10),
             _NutritionField(
@@ -179,7 +256,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               label: 'Carbohydrates',
               unit: 'g',
               color: AppTheme.carbsColor,
-              validator: (v) => _validateNumber(v, 'Carbs'),
+              validator: _isSpice ? (_) => null : (v) => _validateNumber(v, 'Carbs'),
+              isOptional: _isSpice,
             ),
             const SizedBox(height: 10),
             _NutritionField(
@@ -187,10 +265,11 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               label: 'Fat',
               unit: 'g',
               color: AppTheme.fatColor,
-              validator: (v) => _validateNumber(v, 'Fat'),
+              validator: _isSpice ? (_) => null : (v) => _validateNumber(v, 'Fat'),
+              isOptional: _isSpice,
             ),
 
-            // Micros section — only shown if there are custom goals
+            // Micros section
             if (microGoals.isNotEmpty) ...[
               const SizedBox(height: 24),
               _sectionLabel(context, 'Micronutrients per serving'),
@@ -208,7 +287,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     label: goal.name,
                     unit: goal.unit,
                     color: AppTheme.primaryLight,
-                    validator: (_) => null, // optional
+                    validator: (_) => null,
                     isOptional: true,
                   ),
                 );

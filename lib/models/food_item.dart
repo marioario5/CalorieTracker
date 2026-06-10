@@ -10,6 +10,7 @@ class FoodItem {
   final double servingSize;
   final String servingUnit;
   final Map<String, double> micros; // e.g. {'iron': 2.5, 'vitamin_c': 30.0}
+  final bool isSpice; // spices/seasonings: macros negligible, used for flavour tracking
 
   FoodItem({
     required this.id,
@@ -21,6 +22,7 @@ class FoodItem {
     required this.servingSize,
     required this.servingUnit,
     this.micros = const {},
+    this.isSpice = false,
   });
 
   FoodItem copyWith({
@@ -33,6 +35,7 @@ class FoodItem {
     double? servingSize,
     String? servingUnit,
     Map<String, double>? micros,
+    bool? isSpice,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class FoodItem {
       servingSize: servingSize ?? this.servingSize,
       servingUnit: servingUnit ?? this.servingUnit,
       micros: micros ?? this.micros,
+      isSpice: isSpice ?? this.isSpice,
     );
   }
 
@@ -57,6 +61,7 @@ class FoodItem {
         'servingSize': servingSize,
         'servingUnit': servingUnit,
         'micros': micros,
+        'isSpice': isSpice,
       };
 
   factory FoodItem.fromJson(Map<String, dynamic> json) => FoodItem(
@@ -75,6 +80,7 @@ class FoodItem {
                 ),
               )
             : {},
+        isSpice: json['isSpice'] ?? false,
       );
 
   String toJsonString() => jsonEncode(toJson());
