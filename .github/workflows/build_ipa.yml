@@ -23,6 +23,11 @@ jobs:
       - name: Generate iOS project files
         run: flutter create --platforms=ios . --project-name calorie_tracker
 
+      - name: Install CocoaPods dependencies    # ← ADD THIS
+        run: |
+          cd ios
+          pod install
+
       - name: Disable code signing
         run: |
           cd ios
