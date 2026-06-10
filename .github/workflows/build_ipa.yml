@@ -1,7 +1,7 @@
 name: Build IPA
 
 on:
-  workflow_dispatch: # run manually from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build-ios:
@@ -23,13 +23,42 @@ jobs:
       - name: Generate iOS project files
         run: flutter create --platforms=ios . --project-name calorie_tracker
 
+      - name: Disable code signing
+        run: |
+          cd ios
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.example.calorieTracker" Runner/Info.plist
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
+
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: |
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            | xcpretty || true
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            EXPANDED_CODE_SIGN_IDENTITY=""
 
       - name: Package into IPA
         run: |
           mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload/
+          cp -r ios/build/Build/Products/Release-iphoneos/Runner.app Payload/
           zip -r calorie_tracker.ipa Payload/
           rm -rf Payload/
 
