@@ -80,7 +80,7 @@ class AppTheme {
             color: textPrimary,
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           color: surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
